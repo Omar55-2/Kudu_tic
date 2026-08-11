@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block crumb %}Super Admin{% endblock %}
+{% block page_title %}Super Admin Panel{% endblock %}
+{% block title %}Super Admin &mdash; Kudu Ticketing{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+  <section class="bg-white border border-gray-200 rounded-2xl p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+    <h3 class="text-[14px] font-bold text-gray-900 mb-1">Add Employee Directly</h3>
+    <p class="text-[12px] text-gray-500 mb-4">Bypasses email verification &mdash; the account is active immediately.</p>
+    <form method="POST" action="{{ url_for('superadmin.add_employee') }}" class="flex flex-col gap-3">
+      <input type="text" name="full_name" placeholder="Full name" required class="px-3.5 py-2.5 border border-gray-200 rounded-xl text-[13px]">
+      <input type="email" name="email" placeholder="Work email" required class="px-3.5 py-2.5 border border-gray-200 rounded-xl text-[13px]">
+      <input type="password" name="password" placeholder="Temporary password (min 8 chars)" minlength="8" required class="px-3.5 py-2.5 border border-gray-200 rounded-xl text-[13px]">
+      <div class="grid grid-cols-2 gap-3">
+        <select name="department" class="px-3.5 py-2.5 border border-gray-200 rounded-xl text-[13px] bg-white">
+          {% for dept in departments %}<option value="{{ dept.key }}">{{ dept.label }}</option>{% endfor %}
+        </select>
+        <select name="role" class="px-3.5 py-2.5 border border-gray-200 rounded-xl text-[13px] bg-white">
+          <option value="employee">Employee</option>
+          <option value="admin">Admin</option>
+          <option value="super_admin">Super Admin</option>
+        </select>
+      </div>
+      <button type="submit" class="py-2.5 bg-[#ff6337] text-white text-[13px] font-semibold rounded-xl hover:bg-[#e5522c]">Add Employee</button>
+    </form>
+  </section>
+
+  <section class="bg-white border border-gray-200 rounded-2xl p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+    <h3 class="text-[14px] font-bold text-gray-900 mb-4">SLA Policy (minutes per priority)</h3>
+    <form method="POST" action="{{ url_for('superadmin.update_sla') }}" class="flex flex-col gap-3">
+      {% for p in priorities %}
+      <div class="flex items-center gap-3">
+        <span class="w-24 text-[12px] font-semibold text-gray-600">{{ priority_labels[p] }}</span>
+        <input type="number" name="sla_{{ p }}" value="{{ sla_minutes.get(p, 0) }}" min="1"
+          class="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-[13px]">
+        <span class="text-[11px] text-gray-400">minutes</span>
+      </div>
+      {% endfor %}
+      <button type="submit" class="mt-2 py-2.5 bg-gray-900 text-white text-[13px] font-semibold rounded-xl hover:bg-gray-800">Save SLA Policy</button>
+    </form>
+  </section>
+
+  <section class="bg-white border border-gray-200 rounded-2xl p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+    <h3 class="text-[14px] font-bold text-gray-900 mb-4">Workload & Auto-Close</h3>
+    <form method="POST" action="{{ url_for('superadmin.update_workload') }}" class="flex items-center gap-3 mb-4">
+      <label class="w-40 text-[12px] font-semibold text-gray-600">Workload capacity (pts)</label>
+      <input type="number" name="workload_capacity" value="{{ workload_capacity }}" min="1" class="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-[13px]">
+      <button type="submit" class="px-3 py-2 bg-gray-900 text-white text-[12px] font-semibold rounded-lg hover:bg-gray-800">Save</button>
+    </form>
+    <form method="POST" action="{{ url_for('superadmin.update_auto_close') }}" class="flex items-center gap-3">
+      <label class="w-40 text-[12px] font-semibold text-gray-600">Auto-close after (days)</label>
+      <input type="number" name="auto_close_days" value="{{ auto_close_days }}" min="1" class="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-[13px]">
+      <button type="submit" class="px-3 py-2 bg-gray-900 text-white text-[12px] font-semibold rounded-lg hover:bg-gray-800">Save</button>
+    </form>
+  </section>
+
+  <section class="bg-white border border-gray-200 rounded-2xl p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+    <h3 class="text-[14px] font-bold text-gray-900 mb-4">Categories</h3>
+    <form method="POST" action="{{ url_for('superadmin.add_category') }}" class="flex gap-2 mb-4">
+      <input type="text" name="key" placeholder="key (e.g. billing)" required class="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-[12px]">
+      <input type="text" name="label" placeholder="Label (e.g. Billing)" required class="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-[12px]">
+      <button type="submit" class="px-3 py-2 bg-[#ff6337] text-white text-[12px] font-semibold rounded-lg hover:bg-[#e5522c]">Add</button>
+    </form>
+    <div class="flex flex-col gap-2">
+      {% for c in categories %}
+      <div class="flex items-center justify-between text-[12px] py-1.5 border-b border-gray-50 last:border-0">
+        <span class="{{ 'text-gray-800' if c.is_active else 'text-gray-300 line-through' }}">{{ c.label }}</span>
+        <form method="POST" action="{{ url_for('superadmin.toggle_category', category_id=c.id) }}">
+          <button type="submit" class="text-[11px] font-semibold {{ 'text-red-600' if c.is_active else 'text-emerald-600' }} hover:underline">
+            {{ 'Disable' if c.is_active else 'Enable' }}
+          </button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+    <p class="text-[10px] text-gray-400 mt-3">Note: brand-new categories need the database enum widened before they can be selected on tickets &mdash; contact engineering to finalize rollout.</p>
+  </section>
+
+  <section class="bg-white border border-gray-200 rounded-2xl p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+    <h3 class="text-[14px] font-bold text-gray-900 mb-4">Departments</h3>
+    <form method="POST" action="{{ url_for('superadmin.add_department') }}" class="flex gap-2 mb-4">
+      <input type="text" name="key" placeholder="Department name" required class="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-[12px]">
+      <button type="submit" class="px-3 py-2 bg-[#ff6337] text-white text-[12px] font-semibold rounded-lg hover:bg-[#e5522c]">Add</button>
+    </form>
+    <div class="flex flex-col gap-2">
+      {% for d in departments %}
+      <div class="flex items-center justify-between text-[12px] py-1.5 border-b border-gray-50 last:border-0">
+        <span class="{{ 'text-gray-800' if d.is_active else 'text-gray-300 line-through' }}">{{ d.label }}</span>
+        <form method="POST" action="{{ url_for('superadmin.toggle_department', department_id=d.id) }}">
+          <button type="submit" class="text-[11px] font-semibold {{ 'text-red-600' if d.is_active else 'text-emerald-600' }} hover:underline">
+            {{ 'Disable' if d.is_active else 'Enable' }}
+          </button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+    <p class="text-[10px] text-gray-400 mt-3">Note: brand-new departments need the database enum widened before they can be selected &mdash; contact engineering to finalize rollout.</p>
+  </section>
+
+</div>
+{% endblock %}
